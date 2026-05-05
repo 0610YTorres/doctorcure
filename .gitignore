@@ -10,6 +10,11 @@ dist/
 build/
 .pytest_cache/
 
+# PyInstaller
+backend/dist/
+backend/build/
+backend/*.spec
+
 # Node / Next.js
 node_modules/
 frontend/.next/
@@ -18,7 +23,7 @@ frontend/.env.local
 frontend/.env.production
 .npm/
 
-# Distribucion (se genera con PREPARAR_PAQUETE.bat)
+# Distribucion
 _DISTRIBUCION/
 
 # Sistema operativo
@@ -38,6 +43,8 @@ desktop.ini
 *.bak
 uploads/
 
-# Plantilla Excel — anadir manualmente tras clonar el repo
+# Plantilla Excel — anadir manualmente tras clonar
 backend/templates/*.xlsx
+
+# Claude
 .claude/

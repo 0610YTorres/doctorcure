@@ -7,10 +7,11 @@ from pathlib import Path
 from openpyxl import load_workbook
 
 from models.schemas import PatientData
+from utils.paths import get_template_xlsx
 
 logger = logging.getLogger(__name__)
 
-TEMPLATE_PATH = Path(__file__).parent.parent / "templates" / "plantilla_comite_tumores.xlsx"
+TEMPLATE_PATH = get_template_xlsx()
 
 # Fragmentos XML que openpyxl elimina al guardar (imagen EMF del encabezado)
 _REL_DRAWING = (
