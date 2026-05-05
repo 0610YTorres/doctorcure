@@ -1,4 +1,4 @@
-# ── Python ────────────────────────────────────────────────────────────────────
+# Python
 venv/
 __pycache__/
 *.py[cod]
@@ -10,29 +10,34 @@ dist/
 build/
 .pytest_cache/
 
-# ── Node / Next.js ────────────────────────────────────────────────────────────
+# Node / Next.js
 node_modules/
 frontend/.next/
-frontend/out/          # build estático — se genera con npm run build
+frontend/out/
 frontend/.env.local
+frontend/.env.production
 .npm/
 
-# ── Distribución (se genera con PREPARAR_PAQUETE.bat) ────────────────────────
+# Distribucion (se genera con PREPARAR_PAQUETE.bat)
 _DISTRIBUCION/
 
-# ── Sistema operativo ─────────────────────────────────────────────────────────
+# Sistema operativo
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# ── IDEs ──────────────────────────────────────────────────────────────────────
+# IDEs
 .vscode/
 .idea/
 *.suo
 *.user
 
-# ── Archivos sensibles / temporales ──────────────────────────────────────────
+# Temporales
 *.log
 *.tmp
 *.bak
 uploads/
+
+# Plantilla Excel — anadir manualmente tras clonar el repo
+backend/templates/*.xlsx
+.claude/

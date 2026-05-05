@@ -1,77 +1,82 @@
-# DoctorCure — Historia Clínica PDF → Excel
+# DoctorCure — Historia Clínica → Excel
 
-Extracción automática de datos clínicos a partir de PDFs de historias clínicas.
-Procesamiento 100% local (regex + OCR). Sin IA de pago, sin APIs externas.
+Aplicación web local que extrae automáticamente los campos clínicos de una historia clínica en PDF y genera un Excel listo para el **Comité de Tumores**, respetando la plantilla institucional.
+
+> **100 % local — sin IA externa — sin envío de datos a terceros.**
 
 ---
 
-## Arquitectura
+## Características
+
+- 📄 **PDF nativo**: extracción directa de texto digital
+- 🔍 **OCR local**: soporte para PDFs escaneados vía Tesseract
+- 🤖 **Extracción automática**: regex en cascada con puntuación de confianza
+- ✏️ **Editor de campos**: revisión y corrección manual antes de exportar
+- 📊 **Excel con plantilla**: respeta formato, cabecera EMF y celdas fusionadas
+- 🖥️ **Arranque automático**: se inicia con Windows, sin intervención del usuario
+
+---
+
+## Tecnologías
+
+| Capa | Stack |
+|---|---|
+| Backend | Python 3.11+, FastAPI, uvicorn |
+| Extracción PDF | pdfplumber, pypdf, pdf2image + Tesseract OCR |
+| Excel | openpyxl + restauración de imagen EMF vía zipfile |
+| Frontend | Next.js 14 (App Router), Tailwind CSS |
+| Despliegue | FastAPI sirve el frontend estático (sin Node.js en producción) |
+
+---
+
+## Estructura del proyecto
 
 ```
 DoctorCure/
-├── backend/                  FastAPI (Python)
-│   ├── main.py               Punto de entrada
+├── backend/
+│   ├── main.py                  # FastAPI + sirve el frontend
 │   ├── requirements.txt
-│   ├── models/schemas.py     Pydantic models
+│   ├── models/schemas.py        # PatientData, ExtractionResult
 │   ├── routers/
-│   │   ├── upload.py         POST /api/upload
-│   │   └── export.py         POST /api/export
+│   │   ├── upload.py            # POST /api/upload
+│   │   └── export.py            # POST /api/export
 │   ├── services/
-│   │   ├── pdf_extractor.py  pdfplumber → PyMuPDF → OCR
-│   │   ├── ocr_service.py    Tesseract wrapper
-│   │   ├── field_extractor.py Regex + reglas CIE-10
-│   │   └── excel_service.py  openpyxl template
-│   └── utils/patterns.py     Patrones regex + mapas CIE-10
-└── frontend/                 Next.js 14 + Tailwind
-    ├── app/page.tsx           Página principal (toda la UI)
-    ├── components/
-    │   ├── DropZone.tsx       Drag & drop
-    │   ├── FieldEditor.tsx    Formulario editable + confianza
-    │   ├── ProcessingStatus   Animación de progreso
-    │   └── ExportPanel.tsx    Botón descarga Excel
-    └── lib/
-        ├── api.ts             Cliente HTTP
-        └── types.ts           Tipos + definición de campos
+│   │   ├── field_extractor.py   # Extracción de campos con regex
+│   │   └── excel_service.py     # Generación del Excel
+│   ├── utils/patterns.py        # Patrones regex + CIE-10 map
+│   └── templates/               # plantilla_comite_tumores.xlsx (no incluida)
+├── frontend/
+│   ├── app/page.tsx             # UI principal
+│   ├── components/              # DropZone, FieldEditor, ExportPanel...
+│   └── lib/                     # api.ts, types.ts
+├── instalar/
+│   ├── INSTALAR.bat             # Instalador para Windows (ejecutar como admin)
+│   ├── arrancar.vbs             # Inicio silencioso del servidor
+│   └── start_server.bat         # Arranca FastAPI
+└── PREPARAR_PAQUETE.bat         # Genera el paquete de distribución
 ```
 
 ---
 
-## Pre-requisitos
+## Instalación para desarrollo
 
-| Herramienta | Versión mínima | Notas |
-|---|---|---|
-| Python | 3.10+ | `python --version` |
-| Node.js | 18+ | `node --version` |
-| Tesseract | 5.x | Solo para PDFs escaneados |
+### Requisitos
 
-### Instalar Tesseract en Windows
+- Python 3.11+
+- Node.js 18+
+- [Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki) (opcional, para PDFs escaneados)
 
-1. Descargar installer desde https://github.com/UB-Mannheim/tesseract/wiki
-2. Instalar en `C:\Program Files\Tesseract-OCR\`
-3. Agregar a PATH del sistema
-4. Instalar idioma español: en el installer marcar `spa`
-5. Verificar: `tesseract --version`
-
----
-
-## Ejecución
-
-### 1. Backend
+### Backend
 
 ```bash
 cd backend
 python -m venv venv
-venv\Scripts\activate          # Windows
-# source venv/bin/activate     # Linux/Mac
-
+venv\Scripts\activate        # Windows
 pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+uvicorn main:app --reload
 ```
 
-API disponible en http://localhost:8000
-Docs interactivas en http://localhost:8000/docs
-
-### 2. Frontend
+### Frontend (desarrollo)
 
 ```bash
 cd frontend
@@ -79,61 +84,37 @@ npm install
 npm run dev
 ```
 
-App disponible en http://localhost:3000
+Abre [http://localhost:3000](http://localhost:3000).
+
+### Plantilla Excel
+
+La plantilla institucional **no está incluida** en el repositorio.
+Cópiala manualmente a `backend/templates/plantilla_comite_tumores.xlsx`.
 
 ---
 
-## Flujo de uso
+## Instalación en PC del médico (producción)
 
-1. Abrir http://localhost:3000
-2. Arrastrar o seleccionar un PDF de historia clínica
-3. Clic en **Analizar Historia Clínica**
-4. Revisar y editar los campos extraídos
-5. Clic en **Exportar Excel** → descarga automática
+1. Ejecuta `PREPARAR_PAQUETE.bat` en tu PC de desarrollo — genera `_DISTRIBUCION/DoctorCure/`
+2. Copia esa carpeta a `C:\DoctorCure` en el PC destino
+3. Clic derecho en `C:\DoctorCure\instalar\INSTALAR.bat` → **Ejecutar como administrador**
+4. El instalador configura el arranque automático y crea el acceso directo en el Escritorio
+
+El servidor corre en `http://localhost:8000` y arranca solo al iniciar sesión en Windows.
 
 ---
 
 ## Campos extraídos
 
-| Campo | Método |
+| Sección | Campos |
 |---|---|
-| Nombre del paciente | Regex (nombre/paciente:) |
-| Tipo y número de documento | Regex (CC/TI/CE + número) |
-| Edad | Regex (edad: NN años) |
-| Sexo | Regex (sexo/género:) |
-| Código CIE-10 | Regex (CIE-10: X00.0) |
-| Descripción diagnóstico | Regex contextual |
-| Tipo de cáncer | CIE-10 map + keywords |
-| Estadificación | Regex (Estadio I/II/III/IV, TNM) |
-| Fecha diagnóstico | Regex (fecha diagnóstico:) |
-| Tratamiento inicial | Regex + keywords (quimio/radio/cirugía) |
-| Resultado tratamiento | Keywords (remisión/progresión) |
-| Médico tratante | Regex (Dr./médico tratante:) |
-
-### Motor de extracción
-
-- Cada campo tiene 3-5 patrones regex en cascada
-- Confianza decae 15% por patrón de respaldo usado
-- Tipo de cáncer: inferencia desde código CIE-10 → keywords → texto
-- Tratamiento y resultado: extracción por campo → inferencia de texto completo
+| Identificación | Nombres, apellidos, CC, tipo documento, edad, sexo, fecha atención, médico tratante, especialidad, entidad, fecha diagnóstico |
+| Diagnóstico | CIE-10, descripción, diagnóstico patológico, TNM (T/N/M), estadificación |
+| Imágenes | Ecografía, TAC, RMN, PET/CT, mamografía, informes |
+| Tratamientos | Cirugía, quimioterapia, radioterapia, hormonoterapia (recibió + detalles) |
 
 ---
 
-## Variables de entorno (opcional)
+## Licencia
 
-Crear `frontend/.env.local`:
-```
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
-
----
-
-## Troubleshooting
-
-| Problema | Solución |
-|---|---|
-| `ModuleNotFoundError: pdfplumber` | Activar venv y `pip install -r requirements.txt` |
-| `tesseract not found` | Instalar Tesseract y agregar al PATH |
-| PDF escaneado sin texto | El sistema usa OCR automáticamente si Tesseract está instalado |
-| CORS error en frontend | Verificar que backend corra en puerto 8000 |
-| Campo vacío tras extracción | Editar manualmente en la UI antes de exportar |
+MIT
