@@ -1,0 +1,38 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+.env.*
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# ── Node / Next.js ────────────────────────────────────────────────────────────
+node_modules/
+frontend/.next/
+frontend/out/          # build estático — se genera con npm run build
+frontend/.env.local
+.npm/
+
+# ── Distribución (se genera con PREPARAR_PAQUETE.bat) ────────────────────────
+_DISTRIBUCION/
+
+# ── Sistema operativo ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDEs ──────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.user
+
+# ── Archivos sensibles / temporales ──────────────────────────────────────────
+*.log
+*.tmp
+*.bak
+uploads/
