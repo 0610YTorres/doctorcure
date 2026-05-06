@@ -1,6 +1,9 @@
 import axios from "axios";
 import { ExtractionResult, PatientData } from "./types";
 
+// En producción (desktop/servidor): NEXT_PUBLIC_API_URL="" → BASE="" → URLs relativas
+// En desarrollo (npm run dev):      NEXT_PUBLIC_API_URL no definida → http://localhost:8000
+// IMPORTANTE: usar ?? no || porque || trata "" como falso
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 const client = axios.create({ baseURL: BASE, timeout: 60_000 });

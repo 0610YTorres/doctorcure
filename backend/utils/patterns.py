@@ -226,7 +226,8 @@ PATTERNS: dict[str, list[str]] = {
         r"(?i)(?:mastectom[ií]a|histerectom[ií]a|prostatectom[ií]a|resección|colectom[ií]a|lumpectom[ií]a|nefrectom[ií]a|tiroidectom[ií]a)(?:\s+\w+)?",
     ],
     "quimioterapia_esquema": [
-        r"(?i)(?:esquema|ciclos?\s*y\s*esquemas?|protocolo|r[eé]gimen)\s*[:\-]\s*(.+?)(?=\n\n|\n[A-Z]|\Z)",
+        # "régimen" eliminado para no capturar "Régimen: Subsidiado" del sistema de salud
+        r"(?i)(?:esquema|ciclos?\s*y\s*esquemas?|protocolo)\s*[:\-]\s*(.+?)(?=\n\n|\n[A-Z]|\Z)",
         r"(?i)quimioterapia.*?(?:esquema|ciclos?)\s*[:\-]\s*(.+?)(?=\n\n|\n[A-Z]|\Z)",
         r"(?i)(\d+\s*ciclos?\s*(?:de\s*)?[\w\s\+\/\-]+?)(?=\n|\r|$|\s{2,})",
     ],

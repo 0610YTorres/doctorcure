@@ -1,10 +1,5 @@
 """
 Punto de entrada para DoctorCure como aplicación de escritorio.
-
-Estrategia:
-  1. Arranca FastAPI/uvicorn en un puerto libre (hilo demonio).
-  2. Abre Edge o Chrome en modo --app (sin barra de navegador).
-  3. Espera a que el usuario cierre la ventana y termina el proceso.
 """
 
 import os
@@ -13,15 +8,25 @@ import subprocess
 import sys
 import threading
 import time
+import traceback
 
-
-# Rutas donde puede estar Edge o Chrome en Windows
 _BROWSERS = [
     r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
     r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
     r"C:\Program Files\Google\Chrome\Application\chrome.exe",
     r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
 ]
+
+# Log de errores junto al exe
+LOG_FILE = os.path.join(os.path.expanduser("~"), "doctorcure_error.log")
+
+
+def _log(msg: str) -> None:
+    try:
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(f"[{time.strftime('%H:%M:%S')}] {msg}\n")
+    except Exception:
+        pass
 
 
 def _find_free_port() -> int:
@@ -30,26 +35,42 @@ def _find_free_port() -> int:
         return s.getsockname()[1]
 
 
-def _wait_for_server(port: int, timeout: float = 15.0) -> bool:
+def _wait_for_server(port: int, timeout: float = 20.0) -> bool:
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
             with socket.create_connection(("127.0.0.1", port), timeout=0.5):
                 return True
         except OSError:
-            time.sleep(0.2)
+            time.sleep(0.3)
     return False
 
 
 def _start_server(port: int) -> None:
-    import uvicorn
-    uvicorn.run(
-        "main:app",
-        host="127.0.0.1",
-        port=port,
-        log_level="warning",
-        reload=False,
-    )
+    try:
+        _log(f"Iniciando servidor en puerto {port}")
+        _log(f"sys.path = {sys.path[:3]}")
+        _log(f"cwd = {os.getcwd()}")
+
+        # En modo windowed stdout/stderr son None — evitar que uvicorn falle
+        import io
+        if sys.stdout is None:
+            sys.stdout = io.StringIO()
+        if sys.stderr is None:
+            sys.stderr = io.StringIO()
+
+        import uvicorn
+        _log("uvicorn importado OK")
+
+        from main import app
+        _log("main.app importado OK")
+
+        # log_config=None evita el formatter de colores que falla sin terminal
+        uvicorn.run(app, host="127.0.0.1", port=port,
+                    log_level="warning", reload=False, log_config=None)
+    except Exception:
+        _log("ERROR en servidor:")
+        _log(traceback.format_exc())
 
 
 def _find_browser() -> str | None:
@@ -60,28 +81,47 @@ def _find_browser() -> str | None:
 
 
 def main() -> None:
-    # Asegurar que los imports relativos funcionen
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    # Limpiar log anterior
+    try:
+        if os.path.exists(LOG_FILE):
+            os.remove(LOG_FILE)
+    except Exception:
+        pass
+
     if hasattr(sys, "_MEIPASS"):
         base_dir = sys._MEIPASS
+    else:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+
+    _log(f"base_dir = {base_dir}")
+    _log(f"_MEIPASS = {getattr(sys, '_MEIPASS', 'NO')}")
+
     os.chdir(base_dir)
-    sys.path.insert(0, base_dir)
+    if base_dir not in sys.path:
+        sys.path.insert(0, base_dir)
 
     port = _find_free_port()
+    _log(f"Puerto elegido: {port}")
 
-    # Arrancar servidor en hilo demonio
     thread = threading.Thread(target=_start_server, args=(port,), daemon=True)
     thread.start()
 
     if not _wait_for_server(port):
-        print("ERROR: el servidor no respondió a tiempo.", file=sys.stderr)
+        _log("Timeout esperando al servidor")
+        import tkinter, tkinter.messagebox
+        tkinter.Tk().withdraw()
+        tkinter.messagebox.showerror(
+            "DoctorCure — Error",
+            f"El servidor no pudo iniciar.\n\n"
+            f"Revise el archivo de log:\n{LOG_FILE}"
+        )
         sys.exit(1)
 
+    _log("Servidor listo — abriendo ventana")
     url = f"http://127.0.0.1:{port}"
     browser = _find_browser()
 
     if browser:
-        # Carpeta de perfil aislada para que no mezcle con el navegador del usuario
         user_data = os.path.join(os.path.expanduser("~"), ".doctorcure_profile")
         proc = subprocess.Popen([
             browser,
@@ -91,12 +131,11 @@ def main() -> None:
             "--disable-extensions",
             "--window-size=1280,820",
         ])
-        proc.wait()  # Bloquea hasta que el usuario cierre la ventana
+        proc.wait()
     else:
-        # Fallback: abrir en el navegador por defecto
         import webbrowser
         webbrowser.open(url)
-        thread.join()  # Mantener vivo el servidor
+        thread.join()
 
 
 if __name__ == "__main__":

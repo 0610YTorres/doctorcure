@@ -48,6 +48,14 @@ pyinstaller ^
     --windowed ^
     --add-data "%FRONTEND_OUT%;frontend/out" ^
     --add-data "%TEMPLATES%;templates" ^
+    --hidden-import "main" ^
+    --hidden-import "routers.upload" ^
+    --hidden-import "routers.export" ^
+    --hidden-import "services.field_extractor" ^
+    --hidden-import "services.excel_service" ^
+    --hidden-import "models.schemas" ^
+    --hidden-import "utils.patterns" ^
+    --hidden-import "utils.paths" ^
     --hidden-import "uvicorn.logging" ^
     --hidden-import "uvicorn.loops" ^
     --hidden-import "uvicorn.loops.auto" ^
@@ -59,7 +67,9 @@ pyinstaller ^
     --hidden-import "pdfplumber" ^
     --hidden-import "pytesseract" ^
     --hidden-import "openpyxl" ^
+    --hidden-import "tkinter" ^
     --collect-all "pdfplumber" ^
+    --collect-all "starlette" ^
     --noconfirm ^
     desktop.py
 
