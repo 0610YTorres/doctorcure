@@ -1,15 +1,27 @@
 """
-Punto de entrada para la versión de escritorio de DoctorCure.
-Arranca uvicorn en un puerto libre y abre una ventana nativa con pywebview.
+Punto de entrada para DoctorCure como aplicación de escritorio.
+
+Estrategia:
+  1. Arranca FastAPI/uvicorn en un puerto libre (hilo demonio).
+  2. Abre Edge o Chrome en modo --app (sin barra de navegador).
+  3. Espera a que el usuario cierre la ventana y termina el proceso.
 """
 
+import os
 import socket
+import subprocess
 import sys
 import threading
 import time
-import logging
 
-logger = logging.getLogger(__name__)
+
+# Rutas donde puede estar Edge o Chrome en Windows
+_BROWSERS = [
+    r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+    r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+    r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+    r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+]
 
 
 def _find_free_port() -> int:
@@ -18,20 +30,7 @@ def _find_free_port() -> int:
         return s.getsockname()[1]
 
 
-def _start_server(port: int) -> None:
-    import uvicorn
-    uvicorn.run(
-        "main:app",
-        host="127.0.0.1",
-        port=port,
-        log_level="warning",
-        # Desactiva el reload — no aplica en producción
-        reload=False,
-    )
-
-
 def _wait_for_server(port: int, timeout: float = 15.0) -> bool:
-    """Espera hasta que el servidor responda."""
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
@@ -42,37 +41,63 @@ def _wait_for_server(port: int, timeout: float = 15.0) -> bool:
     return False
 
 
+def _start_server(port: int) -> None:
+    import uvicorn
+    uvicorn.run(
+        "main:app",
+        host="127.0.0.1",
+        port=port,
+        log_level="warning",
+        reload=False,
+    )
+
+
+def _find_browser() -> str | None:
+    for path in _BROWSERS:
+        if os.path.exists(path):
+            return path
+    return None
+
+
 def main() -> None:
-    import webview
+    # Asegurar que los imports relativos funcionen
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    if hasattr(sys, "_MEIPASS"):
+        base_dir = sys._MEIPASS
+    os.chdir(base_dir)
+    sys.path.insert(0, base_dir)
 
     port = _find_free_port()
 
-    # Arrancar FastAPI en hilo demonio
-    server_thread = threading.Thread(
-        target=_start_server, args=(port,), daemon=True
-    )
-    server_thread.start()
+    # Arrancar servidor en hilo demonio
+    thread = threading.Thread(target=_start_server, args=(port,), daemon=True)
+    thread.start()
 
-    # Esperar a que el servidor esté listo
     if not _wait_for_server(port):
-        print("ERROR: el servidor no arrancó a tiempo.", file=sys.stderr)
+        print("ERROR: el servidor no respondió a tiempo.", file=sys.stderr)
         sys.exit(1)
 
-    # Crear y mostrar la ventana
-    webview.create_window(
-        title="DoctorCure — Historia Clínica a Excel",
-        url=f"http://127.0.0.1:{port}",
-        width=1280,
-        height=820,
-        min_size=(900, 650),
-        resizable=True,
-        text_select=True,
-    )
-    webview.start(debug=False)
+    url = f"http://127.0.0.1:{port}"
+    browser = _find_browser()
+
+    if browser:
+        # Carpeta de perfil aislada para que no mezcle con el navegador del usuario
+        user_data = os.path.join(os.path.expanduser("~"), ".doctorcure_profile")
+        proc = subprocess.Popen([
+            browser,
+            f"--app={url}",
+            f"--user-data-dir={user_data}",
+            "--no-first-run",
+            "--disable-extensions",
+            "--window-size=1280,820",
+        ])
+        proc.wait()  # Bloquea hasta que el usuario cierre la ventana
+    else:
+        # Fallback: abrir en el navegador por defecto
+        import webbrowser
+        webbrowser.open(url)
+        thread.join()  # Mantener vivo el servidor
 
 
 if __name__ == "__main__":
-    # Cambiar al directorio del script para que los imports relativos funcionen
-    import os
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
     main()
